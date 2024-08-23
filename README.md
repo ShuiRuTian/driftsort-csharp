@@ -7,3 +7,5 @@ A port of driftsort to C#
 rust driftsort repo: https://github.com/Voultapher/driftsort
 Design doc of driftsort: https://github.com/Voultapher/sort-research-rs/blob/main/writeup/driftsort_introduction/text.md
 rust std switch to driftsort PR: https://github.com/rust-lang/rust/pull/124032
+
+A tempt to replace C#'s sort algorithm: https://github.com/dotnet/runtime/pull/68436
