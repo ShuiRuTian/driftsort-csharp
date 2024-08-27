@@ -72,9 +72,55 @@ internal class SmallSortHelper
         hole = tail;
     }
 
+    /// SAFETY: The caller MUST guarantee that `v_base` is valid for 4 reads and
+    /// `dst` is valid for 4 writes. The result will be stored in `dst[0..4]`.
+    static void sort4_stable<T, C>(ref T v_base, ref T dst, C comparer)
+    where C : IComparer<T>
+    {
+        // By limiting select to picking pointers, we are guaranteed good cmov code-gen
+        // regardless of type T's size. Further this only does 5 instead of 6
+        // comparisons compared to a stable transposition 4 element sorting-network,
+        // and always copies each element exactly once.
+
+        // SAFETY: all pointers have offset at most 3 from v_base and dst, and are
+        // thus in-bounds by the precondition.
+        bool condition1 = comparer.Compare(Unsafe.Add(ref v_base, 1), v_base) < 0;
+        bool condition2 = comparer.Compare(Unsafe.Add(ref v_base, 3), Unsafe.Add(ref v_base, 2)) < 0;
+
+        ref T a = ref Unsafe.Add(ref v_base, condition1 ? 1 : 0);
+        ref T b = ref Unsafe.Add(ref v_base, condition1 ? 0 : 1);
+        ref T c = ref Unsafe.Add(ref v_base, 2 + (condition2 ? 1 : 0));
+        ref T d = ref Unsafe.Add(ref v_base, 2 + (condition2 ? 0 : 1));
+
+        // Compare (a, c) and (b, d) to identify max/min. We're left with two
+        // unknown elements, but because we are a stable sort we must know which
+        // one is leftmost and which one is rightmost.
+        // c3, c4 | min max unknown_left unknown_right
+        //  0,  0 |  a   d    b         c
+        //  0,  1 |  a   b    c         d
+        //  1,  0 |  c   d    a         b
+        //  1,  1 |  c   b    a         d
+        bool condition3 = comparer.Compare(c, a) < 0;
+        bool condition4 = comparer.Compare(d, b) < 0;
+        ref T min = ref condition3 ? ref c : ref a;
+        ref T max = ref condition4 ? ref b : ref d;
+        ref T unknown_left = ref condition3 ? ref a : ref (condition4 ? ref c : ref b);
+        ref T unknown_right = ref condition4 ? ref d : ref (condition3 ? ref b : ref c);
+
+        // Sort the last two unknown elements.
+        bool condition5 = comparer.Compare(unknown_right, unknown_left) < 0;
+        ref T lo = ref condition5 ? ref unknown_right : ref unknown_left;
+        ref T hi = ref condition5 ? ref unknown_left : ref unknown_right;
+
+        dst = min;
+        Unsafe.Add(ref dst, 1) = lo;
+        Unsafe.Add(ref dst, 2) = hi;
+        Unsafe.Add(ref dst, 3) = max;
+    }
+
     static void small_sort_network<T, C>(Span<T> values, C comparer)
         where C : IComparer<T>
-    { 
+    {
 
     }
 

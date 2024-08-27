@@ -12,7 +12,13 @@ namespace driftsort
         public static void quicksort<T, C>(Span<T> values, C comparer)
             where C : IComparer<T>
         {
-            
+            while(true){
+                var length = values.Length;
+
+                if(length <= ){
+                    
+                }
+            }
         }
     }
 }
